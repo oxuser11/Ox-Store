@@ -34,7 +34,6 @@ def save_posts(posts):
     except Exception:
         pass
 
-# Global memory
 POSTS = load_posts()
 
 # ================= FLASK WEBSITE =================
@@ -63,68 +62,77 @@ HTML_TEMPLATE = """
         }
         header {
             background: linear-gradient(135deg, #1f1f38, #0d1117);
-            padding: 30px 20px;
+            padding: 20px 15px;
             text-align: center;
             border-bottom: 2px solid #30363d;
             box-shadow: 0 4px 20px rgba(0, 255, 204, 0.1);
         }
         .logo {
-            font-size: 2.2rem;
+            font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(90deg, #00f2fe, #4facfe, #00c6ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
         }
         .subtitle {
             color: #8b949e;
-            font-size: 0.95rem;
-            margin-top: 5px;
+            font-size: 0.8rem;
+            margin-top: 4px;
         }
         .search-container {
-            max-width: 600px;
-            margin: 25px auto 10px;
+            max-width: 500px;
+            margin: 15px auto 5px;
             position: relative;
-            padding: 0 15px;
+            padding: 0 10px;
         }
         .search-box {
             width: 100%;
-            padding: 14px 20px 14px 45px;
+            padding: 10px 15px 10px 40px;
             background: #161b22;
-            border: 2px solid #30363d;
+            border: 1.5px solid #30363d;
             border-radius: 50px;
             color: #fff;
-            font-size: 1rem;
+            font-size: 0.9rem;
             outline: none;
             transition: 0.3s;
         }
         .search-box:focus {
             border-color: #00f2fe;
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
         }
         .search-icon {
             position: absolute;
-            left: 32px;
+            left: 24px;
             top: 50%;
             transform: translateY(-50%);
             color: #8b949e;
+            font-size: 0.9rem;
         }
+
+        /* COMPACT GRID FOR MOBILE (2 CARDS PER ROW) */
         .container {
             max-width: 1100px;
-            margin: 30px auto;
-            padding: 0 20px;
+            margin: 15px auto;
+            padding: 0 10px;
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 20px;
+            }
         }
         .card {
             background: #161b22;
-            border-radius: 16px;
+            border-radius: 14px;
             border: 1px solid #30363d;
-            padding: 20px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -139,63 +147,65 @@ HTML_TEMPLATE = """
             top: 0;
             left: 0;
             width: 100%;
-            height: 4px;
+            height: 3px;
             background: linear-gradient(90deg, #ff0844, #ffb199, #00f2fe);
         }
-        .card:hover {
-            transform: translateY(-6px);
-            border-color: #58a6ff;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        }
         .card img {
-            width: 80px;
-            height: 80px;
-            border-radius: 20px;
+            width: 55px;
+            height: 55px;
+            border-radius: 14px;
             object-fit: cover;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            border: 2px solid #30363d;
+            border: 1.5px solid #30363d;
         }
         .card h3 {
-            font-size: 1.2rem;
+            font-size: 0.92rem;
             color: #f0f6fc;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
         }
         .card p {
             color: #8b949e;
-            font-size: 0.85rem;
-            line-height: 1.4;
-            margin-bottom: 20px;
+            font-size: 0.72rem;
+            line-height: 1.3;
+            margin-bottom: 12px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
             flex-grow: 1;
         }
         .btn-download {
             width: 100%;
-            padding: 12px;
+            padding: 8px 10px;
             background: linear-gradient(135deg, #00f2fe, #4facfe);
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             color: #0d1117;
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.8rem;
             cursor: pointer;
             transition: 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
         }
         .btn-download:hover {
             opacity: 0.9;
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
         }
         .empty-state {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 60px 20px;
+            padding: 50px 20px;
             color: #8b949e;
         }
 
-        /* MODAL STYLING */
+        /* MODAL POPUP */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -208,81 +218,68 @@ HTML_TEMPLATE = """
             align-items: center;
             justify-content: center;
             z-index: 999;
-            padding: 20px;
+            padding: 15px;
         }
         .modal {
             background: #161b22;
             border: 1px solid #30363d;
-            border-radius: 20px;
-            max-width: 420px;
+            border-radius: 18px;
+            max-width: 380px;
             width: 100%;
-            padding: 25px;
+            padding: 20px;
             text-align: center;
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-            animation: popIn 0.3s ease;
-        }
-        @keyframes popIn {
-            from { transform: scale(0.85); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            position: relative;
         }
         .modal h2 {
-            font-size: 1.4rem;
-            margin-bottom: 8px;
+            font-size: 1.25rem;
+            margin-bottom: 6px;
             color: #fff;
         }
         .modal p {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #8b949e;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .social-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
-            padding: 12px;
-            border-radius: 12px;
+            padding: 10px;
+            border-radius: 10px;
             text-decoration: none;
             color: #fff;
             font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 12px;
+            font-size: 0.88rem;
+            margin-bottom: 10px;
             transition: 0.3s;
-            cursor: pointer;
             border: none;
         }
-        .btn-insta {
-            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-        }
-        .btn-tg1 {
-            background: linear-gradient(135deg, #0088cc, #00c6ff);
-        }
-        .btn-tg2 {
-            background: linear-gradient(135deg, #8e2de2, #4a00e0);
-        }
+        .btn-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .btn-tg1 { background: linear-gradient(135deg, #0088cc, #00c6ff); }
+        .btn-tg2 { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
         .btn-final {
             background: #238636;
-            color: #fff;
             opacity: 0.4;
             pointer-events: none;
-            margin-top: 15px;
-            font-weight: 700;
+            margin-top: 10px;
         }
         .btn-final.unlocked {
             opacity: 1;
             pointer-events: auto;
             background: linear-gradient(135deg, #2ea043, #238636);
-            box-shadow: 0 0 15px rgba(46, 160, 67, 0.4);
+            box-shadow: 0 0 12px rgba(46, 160, 67, 0.4);
         }
         .close-btn {
             position: absolute;
-            top: 15px;
+            top: 12px;
             right: 15px;
             background: transparent;
             border: none;
             color: #8b949e;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             cursor: pointer;
         }
     </style>
@@ -293,7 +290,7 @@ HTML_TEMPLATE = """
         <div class="subtitle">Official VIP Access & Verified Fast Downloads</div>
         <div class="search-container">
             <i class="fa fa-search search-icon"></i>
-            <input type="text" id="searchBox" class="search-box" placeholder="Search application, script, tool..." onkeyup="filterApps()">
+            <input type="text" id="searchBox" class="search-box" placeholder="Search files..." onkeyup="filterApps()">
         </div>
     </header>
 
@@ -301,9 +298,9 @@ HTML_TEMPLATE = """
         <div class="grid" id="appsGrid">
             {% if not posts %}
             <div class="empty-state">
-                <i class="fa fa-box-open" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                <h3>No Files Uploaded Yet!</h3>
-                <p>Upload files via your Telegram Admin Bot to display them here.</p>
+                <i class="fa fa-box-open" style="font-size: 2.5rem; margin-bottom: 10px;"></i>
+                <h3>No Files Uploaded!</h3>
+                <p>Use Telegram Bot /upload to publish files.</p>
             </div>
             {% endif %}
             {% for item in posts %}
@@ -319,12 +316,11 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- SOCIAL UNLOCK POPUP MODAL -->
     <div class="modal-overlay" id="gateModal">
-        <div class="modal" style="position: relative;">
+        <div class="modal">
             <button class="close-btn" onclick="closeGate()">&times;</button>
             <h2>🔒 Unlock Download</h2>
-            <p>Complete the actions below to automatically unlock the download link.</p>
+            <p>Complete the actions to unlock your file.</p>
 
             <a href="{{ insta_link }}" target="_blank" class="social-btn btn-insta" onclick="markStep(1)">
                 <i class="fab fa-instagram"></i> Follow on Instagram
@@ -568,3 +564,4 @@ def delete_item(m):
 if __name__ == '__main__':
     threading.Thread(target=run_flask, daemon=True).start()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    
