@@ -46,6 +46,8 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OX CLOUD HUB | VIP Downloads</title>
+    <meta name="google-site-verification" content="cstGm0uSsndpI03Pr7_Z3ZJ9VnneQ7PwdK80L1yYfYw" />
+  
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
