@@ -1,123 +1,96 @@
 import os
 import json
-import time
-import threading
-import telebot
-from telebot import types
-from flask import Flask, render_template_string, jsonify, request
+import requests
+from flask import Flask, request, jsonify, render_template_string
 
-# ================= CONFIGURATION =================
-BOT_TOKEN = "8893917548:AAGdRCp-BrLj1sb74PDKNEtR6N5Lei-tH6E"
-ADMIN_ID = 8671410379
-ADMIN_USER = "OxRehann"
+app = Flask(__name__)
 
-INSTA_LINK = "https://instagram.com"
-TG_CH1_LINK = "https://t.me/OxRehanCyber"
-TG_CH2_LINK = "https://t.me/+852hkOgj0UNlZGU9"
+DATA_FILE = "files.json"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
-DATA_FILE = "web_posts.json"
-
-# ================= PERSISTENT STORAGE =================
-def load_posts():
+def load_files():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r") as f:
                 return json.load(f)
         except Exception:
-            pass
+            return []
     return []
 
-def save_posts(posts):
-    try:
-        with open(DATA_FILE, "w") as f:
-            json.dump(posts, f, indent=2)
-    except Exception:
-        pass
+def save_files(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
-POSTS = load_posts()
-
-# ================= FLASK WEBSITE =================
-app = Flask(__name__)
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OX CLOUD HUB | VIP Downloads</title>
+    <title>OX Store | VIP Gaming & Cloud Hub</title>
+    
+    <link rel="icon" type="image/png" href="https://cdn.phototourl.com/free/2026-09-17-1b12a644-f2ad-4704-b9cf-a87edf4c49a1.png">
+    <link rel="shortcut icon" href="https://cdn.phototourl.com/free/2026-09-17-1b12a644-f2ad-4704-b9cf-a87edf4c49a1.png">
+    <link rel="apple-touch-icon" href="https://cdn.phototourl.com/free/2026-09-17-1b12a644-f2ad-4704-b9cf-a87edf4c49a1.png">
+
     <meta name="google-site-verification" content="cstGm0uSsndpI03Pr7_Z3ZJ9VnneQ7PwdK80L1yYfYw" />
-  
+    <meta name="description" content="Official OX Store. Fast & verified VIP downloads, configs, and gaming tools.">
+    <meta name="keywords" content="ox store, ox cloud, ox cloud hub, oxstore, vip download, ox mods">
+    <meta name="robots" content="index, follow">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
-            background: #0d1117;
-            color: #f0f6fc;
+            background-color: #0b0f19;
+            color: #f3f4f6;
             min-height: 100vh;
-            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
         }
         header {
-            background: linear-gradient(135deg, #1f1f38, #0d1117);
-            padding: 20px 15px;
+            background: linear-gradient(180deg, rgba(31, 41, 55, 0.7) 0%, rgba(17, 24, 39, 0) 100%);
+            padding: 20px 16px;
             text-align: center;
-            border-bottom: 2px solid #30363d;
-            box-shadow: 0 4px 20px rgba(0, 255, 204, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .logo {
-            font-size: 1.6rem;
+        .header-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+        .logo-title {
+            font-size: 1.45rem;
             font-weight: 800;
-            background: linear-gradient(90deg, #00f2fe, #4facfe, #00c6ff);
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         .subtitle {
-            color: #8b949e;
-            font-size: 0.8rem;
-            margin-top: 4px;
+            font-size: 0.82rem;
+            color: #9ca3af;
+            margin-top: 5px;
         }
-        .search-container {
-            max-width: 500px;
-            margin: 15px auto 5px;
-            position: relative;
-            padding: 0 10px;
-        }
-        .search-box {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            background: #161b22;
-            border: 1.5px solid #30363d;
-            border-radius: 50px;
-            color: #fff;
-            font-size: 0.9rem;
-            outline: none;
-            transition: 0.3s;
-        }
-        .search-box:focus {
-            border-color: #00f2fe;
-            box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
-        }
-        .search-icon {
-            position: absolute;
-            left: 24px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #8b949e;
-            font-size: 0.9rem;
-        }
-
-        /* COMPACT GRID FOR MOBILE (2 CARDS PER ROW) */
         .container {
             max-width: 1100px;
-            margin: 15px auto;
-            padding: 0 10px;
+            margin: 0 auto;
+            padding: 20px 14px;
+            width: 100%;
+            flex: 1;
         }
         .grid {
             display: grid;
@@ -126,444 +99,472 @@ HTML_TEMPLATE = """
         }
         @media (min-width: 768px) {
             .grid {
-                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-                gap: 20px;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 18px;
+            }
+        }
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: repeat(4, 1fr);
             }
         }
         .card {
-            background: #161b22;
+            background: #131b2e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 14px;
-            border: 1px solid #30363d;
-            padding: 12px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            text-align: center;
-            transition: 0.3s;
-            position: relative;
-            overflow: hidden;
+            justify-content: space-between;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.35);
         }
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, #ff0844, #ffb199, #00f2fe);
-        }
-        .card img {
-            width: 55px;
-            height: 55px;
-            border-radius: 14px;
-            object-fit: cover;
+        .card-icon {
+            font-size: 1.8rem;
+            color: #38bdf8;
             margin-bottom: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            border: 1.5px solid #30363d;
         }
-        .card h3 {
-            font-size: 0.92rem;
-            color: #f0f6fc;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-        .card p {
-            color: #8b949e;
-            font-size: 0.72rem;
+        .card-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 6px;
+            word-break: break-word;
             line-height: 1.3;
+        }
+        .card-meta {
+            font-size: 0.75rem;
+            color: #9ca3af;
             margin-bottom: 12px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         .btn-download {
-            width: 100%;
-            padding: 8px 10px;
-            background: linear-gradient(135deg, #00f2fe, #4facfe);
-            border: none;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #ffffff;
+            text-align: center;
+            padding: 10px 12px;
             border-radius: 8px;
-            color: #0d1117;
-            font-weight: 700;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: 0.3s;
+            font-size: 0.82rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
+            border: none;
+            width: 100%;
+            cursor: pointer;
         }
-        .btn-download:hover {
-            opacity: 0.9;
-        }
-        .empty-state {
-            grid-column: 1 / -1;
+        .empty-box {
             text-align: center;
+            color: #6b7280;
             padding: 50px 20px;
-            color: #8b949e;
+            grid-column: span 2;
+            font-size: 0.9rem;
+        }
+        footer {
+            text-align: center;
+            padding: 18px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-weight: 500;
         }
 
-        /* MODAL POPUP */
+        /* Modal Backdrop */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.85);
+            width: 100vw;
+            height: 100vh;
+            background: rgba(4, 7, 13, 0.85);
             backdrop-filter: blur(8px);
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 999;
-            padding: 15px;
+            z-index: 9999;
+            padding: 16px;
         }
-        .modal {
-            background: #161b22;
-            border: 1px solid #30363d;
+        .modal-box {
+            background: #111827;
+            border: 1px solid rgba(56, 189, 248, 0.25);
             border-radius: 18px;
-            max-width: 380px;
             width: 100%;
-            padding: 20px;
+            max-width: 360px;
+            padding: 22px 18px;
             text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-            position: relative;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+            animation: modalFadeIn 0.25s ease-out;
         }
-        .modal h2 {
-            font-size: 1.25rem;
-            margin-bottom: 6px;
+        @keyframes modalFadeIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-icon {
+            font-size: 2.2rem;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .modal-desc {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-bottom: 18px;
+        }
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .task-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+        /* Faded State (Before Click) */
+        .task-btn.faded {
+            opacity: 0.45;
+            filter: grayscale(0.5);
+            background: #1f2937;
+            color: #d1d5db;
+        }
+        /* Active / Gadha State (After Click) */
+        .task-btn.done {
+            opacity: 1;
+            filter: grayscale(0);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        }
+        .task-yt.done {
+            background: linear-gradient(135deg, #b91c1c, #dc2626);
             color: #fff;
         }
-        .modal p {
-            font-size: 0.8rem;
-            color: #8b949e;
-            margin-bottom: 15px;
+        .task-tg.done {
+            background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            color: #fff;
         }
-        .social-btn {
+        .task-ig.done {
+            background: linear-gradient(135deg, #c026d3, #db2777);
+            color: #fff;
+        }
+
+        /* Continue Button */
+        .btn-continue {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            text-decoration: none;
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.88rem;
-            margin-bottom: 10px;
-            transition: 0.3s;
-            border: none;
+            transition: all 0.3s ease;
         }
-        .btn-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
-        .btn-tg1 { background: linear-gradient(135deg, #0088cc, #00c6ff); }
-        .btn-tg2 { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
-        .btn-final {
-            background: #238636;
-            opacity: 0.4;
-            pointer-events: none;
-            margin-top: 10px;
+        .btn-continue.locked {
+            background: #374151;
+            color: #9ca3af;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
-        .btn-final.unlocked {
-            opacity: 1;
-            pointer-events: auto;
-            background: linear-gradient(135deg, #2ea043, #238636);
-            box-shadow: 0 0 12px rgba(46, 160, 67, 0.4);
-        }
-        .close-btn {
-            position: absolute;
-            top: 12px;
-            right: 15px;
-            background: transparent;
-            border: none;
-            color: #8b949e;
-            font-size: 1.3rem;
+        .btn-continue.unlocked {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
             cursor: pointer;
+            opacity: 1;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+        }
+        .btn-close {
+            margin-top: 10px;
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        /* Draggable Support Circle */
+        #draggableSupport {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0088cc, #0ea5e9);
+            box-shadow: 0 6px 18px rgba(0, 136, 204, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-decoration: none;
+            z-index: 99999;
+            touch-action: none;
+            user-select: none;
+            cursor: grab;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        #draggableSupport i {
+            font-size: 1.25rem;
+        }
+        #draggableSupport span {
+            font-size: 0.58rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 1px;
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="logo">⚡ OX CLOUD STORE ⚡</div>
-        <div class="subtitle">Official VIP Access & Verified Fast Downloads</div>
-        <div class="search-container">
-            <i class="fa fa-search search-icon"></i>
-            <input type="text" id="searchBox" class="search-box" placeholder="Search files..." onkeyup="filterApps()">
+        <div class="logo-title">
+            <img src="https://cdn.phototourl.com/free/2026-09-17-1b12a644-f2ad-4704-b9cf-a87edf4c49a1.png" alt="OX Logo" class="header-logo">
+            OX STORE
         </div>
+        <div class="subtitle">OX Cloud Hub • VIP Gaming Resources & Direct Access</div>
     </header>
 
     <div class="container">
-        <div class="grid" id="appsGrid">
-            {% if not posts %}
-            <div class="empty-state">
-                <i class="fa fa-box-open" style="font-size: 2.5rem; margin-bottom: 10px;"></i>
-                <h3>No Files Uploaded!</h3>
-                <p>Use Telegram Bot /upload to publish files.</p>
-            </div>
+        <div class="grid">
+            {% if files %}
+                {% for f in files %}
+                <div class="card">
+                    <div>
+                        <div class="card-icon"><i class="fa-solid fa-file-shield"></i></div>
+                        <div class="card-name">{{ f.name }}</div>
+                        <div class="card-meta">
+                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Verified Resource
+                        </div>
+                    </div>
+                    <button class="btn-download" onclick="triggerUnlock('{{ f.url }}')">
+                        <i class="fa-solid fa-lock"></i> Unlock File
+                    </button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-box">
+                    <i class="fa-solid fa-cloud" style="font-size: 2rem; margin-bottom: 8px;"></i><br>
+                    No downloads uploaded yet. Use Telegram Bot to upload files.
+                </div>
             {% endif %}
-            {% for item in posts %}
-            <div class="card app-card" data-title="{{ item.name.lower() }}" data-desc="{{ item.desc.lower() }}">
-                <img src="{{ item.icon }}" alt="Icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/831/831381.png'">
-                <h3>{{ item.name }}</h3>
-                <p>{{ item.desc }}</p>
-                <button class="btn-download" onclick="openGate('{{ item.file_link }}')">
-                    <i class="fa fa-download"></i> Get File
-                </button>
+        </div>
+    </div>
+
+    <!-- Social Lock Modal -->
+    <div class="modal-overlay" id="lockModal">
+        <div class="modal-box">
+            <div class="modal-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="modal-title">Complete 3 Steps</div>
+            <div class="modal-desc">Join all channels below to unlock your download link</div>
+
+            <div class="task-list">
+                <!-- Task 1: YouTube -->
+                <a href="https://youtube.com" target="_blank" class="task-btn faded task-yt" id="taskYt" onclick="completeTask('yt')">
+                    <span><i class="fa-brands fa-youtube"></i> Subscribe Channel</span>
+                    <i class="fa-regular fa-circle" id="iconYt"></i>
+                </a>
+
+                <!-- Task 2: Telegram -->
+                <a href="https://t.me" target="_blank" class="task-btn faded task-tg" id="taskTg" onclick="completeTask('tg')">
+                    <span><i class="fa-brands fa-telegram"></i> Join Telegram</span>
+                    <i class="fa-regular fa-circle" id="iconTg"></i>
+                </a>
+
+                <!-- Task 3: Instagram -->
+                <a href="https://instagram.com" target="_blank" class="task-btn faded task-ig" id="taskIg" onclick="completeTask('ig')">
+                    <span><i class="fa-brands fa-instagram"></i> Follow Instagram</span>
+                    <i class="fa-regular fa-circle" id="iconIg"></i>
+                </a>
             </div>
-            {% endfor %}
+
+            <button class="btn-continue locked" id="btnContinue" onclick="proceedDownload()">
+                <i class="fa-solid fa-lock"></i> Locked (0/3)
+            </button>
+            <br>
+            <button class="btn-close" onclick="closeModal()">Cancel</button>
         </div>
     </div>
 
-    <div class="modal-overlay" id="gateModal">
-        <div class="modal">
-            <button class="close-btn" onclick="closeGate()">&times;</button>
-            <h2>🔒 Unlock Download</h2>
-            <p>Complete the actions to unlock your file.</p>
+    <!-- Draggable Support Floating Button -->
+    <a href="https://t.me" target="_blank" id="draggableSupport">
+        <i class="fa-brands fa-telegram"></i>
+        <span>SUPPORT</span>
+    </a>
 
-            <a href="{{ insta_link }}" target="_blank" class="social-btn btn-insta" onclick="markStep(1)">
-                <i class="fab fa-instagram"></i> Follow on Instagram
-            </a>
-            <a href="{{ tg1_link }}" target="_blank" class="social-btn btn-tg1" onclick="markStep(2)">
-                <i class="fab fa-telegram"></i> Join Telegram Channel 1
-            </a>
-            <a href="{{ tg2_link }}" target="_blank" class="social-btn btn-tg2" onclick="markStep(3)">
-                <i class="fab fa-telegram"></i> Join Telegram Channel 2
-            </a>
-
-            <a id="continueBtn" href="#" target="_blank" class="social-btn btn-final">
-                <i class="fa fa-unlock"></i> Continue to Download
-            </a>
-        </div>
-    </div>
+    <footer>
+        © 2026 @OxRehann
+    </footer>
 
     <script>
-        function filterApps() {
-            let input = document.getElementById('searchBox').value.toLowerCase();
-            let cards = document.getElementsByClassName('app-card');
-            for (let i = 0; i < cards.length; i++) {
-                let title = cards[i].getAttribute('data-title');
-                let desc = cards[i].getAttribute('data-desc');
-                if (title.includes(input) || desc.includes(input)) {
-                    cards[i].style.display = "flex";
+        let targetDownloadUrl = "";
+        let tasks = { yt: false, tg: false, ig: false };
+
+        function triggerUnlock(url) {
+            targetDownloadUrl = url;
+            document.getElementById('lockModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('lockModal').style.display = 'none';
+        }
+
+        function completeTask(type) {
+            if (type === 'yt') {
+                tasks.yt = true;
+                const el = document.getElementById('taskYt');
+                el.classList.remove('faded');
+                el.classList.add('done');
+                document.getElementById('iconYt').className = 'fa-solid fa-circle-check';
+            } else if (type === 'tg') {
+                tasks.tg = true;
+                const el = document.getElementById('taskTg');
+                el.classList.remove('faded');
+                el.classList.add('done');
+                document.getElementById('iconTg').className = 'fa-solid fa-circle-check';
+            } else if (type === 'ig') {
+                tasks.ig = true;
+                const el = document.getElementById('taskIg');
+                el.classList.remove('faded');
+                el.classList.add('done');
+                document.getElementById('iconIg').className = 'fa-solid fa-circle-check';
+            }
+
+            checkStatus();
+        }
+
+        function checkStatus() {
+            const count = (tasks.yt ? 1 : 0) + (tasks.tg ? 1 : 0) + (tasks.ig ? 1 : 0);
+            const btn = document.getElementById('btnContinue');
+
+            if (count === 3) {
+                btn.className = 'btn-continue unlocked';
+                btn.innerHTML = '<i class="fa-solid fa-unlock"></i> Continue to Download';
+            } else {
+                btn.className = 'btn-continue locked';
+                btn.innerHTML = `<i class="fa-solid fa-lock"></i> Locked (${count}/3)`;
+            }
+        }
+
+        function proceedDownload() {
+            const count = (tasks.yt ? 1 : 0) + (tasks.tg ? 1 : 0) + (tasks.ig ? 1 : 0);
+            if (count === 3 && targetDownloadUrl) {
+                window.open(targetDownloadUrl, '_blank');
+                closeModal();
+            }
+        }
+
+        // Draggable Floating Logic
+        const dragItem = document.getElementById("draggableSupport");
+        let active = false;
+        let currentX, currentY, initialX, initialY;
+        let xOffset = 0, yOffset = 0;
+
+        dragItem.addEventListener("touchstart", dragStart, {passive: false});
+        document.addEventListener("touchend", dragEnd, {passive: false});
+        document.addEventListener("touchmove", drag, {passive: false});
+
+        dragItem.addEventListener("mousedown", dragStart);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("mousemove", drag);
+
+        function dragStart(e) {
+            if (e.type === "touchstart") {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+            if (e.target === dragItem || dragItem.contains(e.target)) {
+                active = true;
+            }
+        }
+
+        function dragEnd() {
+            initialX = currentX;
+            initialY = currentY;
+            active = false;
+        }
+
+        function drag(e) {
+            if (active) {
+                e.preventDefault();
+                if (e.type === "touchmove") {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
                 } else {
-                    cards[i].style.display = "none";
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
                 }
+                xOffset = currentX;
+                yOffset = currentY;
+                setTranslate(currentX, currentY, dragItem);
             }
         }
 
-        let completed = { 1: false, 2: false, 3: false };
-        let activeFile = "";
-
-        function openGate(fileLink) {
-            activeFile = fileLink;
-            document.getElementById('gateModal').style.display = 'flex';
-        }
-
-        function closeGate() {
-            document.getElementById('gateModal').style.display = 'none';
-        }
-
-        function markStep(step) {
-            completed[step] = true;
-            if (completed[1] && completed[2] && completed[3]) {
-                let btn = document.getElementById('continueBtn');
-                btn.classList.add('unlocked');
-                btn.href = activeFile;
-                btn.innerHTML = '<i class="fa fa-download"></i> Continue to Download';
-            }
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
         }
     </script>
 </body>
 </html>
 """
 
-@app.route('/')
+@app.route("/")
 def home():
-    return render_template_string(
-        HTML_TEMPLATE,
-        posts=POSTS,
-        insta_link=INSTA_LINK,
-        tg1_link=TG_CH1_LINK,
-        tg2_link=TG_CH2_LINK
-    )
+    files = load_files()
+    return render_template_string(HTML_TEMPLATE, files=files)
 
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
+@app.route("/webhook", methods=["POST"])
+def telegram_webhook():
+    update = request.get_json(silent=True)
+    if not update or "message" not in update:
+        return jsonify({"status": "ignored"}), 200
+
+    msg = update["message"]
+    chat_id = msg.get("chat", {}).get("id")
+    text = msg.get("text", "")
+
+    if text.startswith("/upload"):
+        content = text.replace("/upload", "").strip()
+        if "|" in content:
+            name, url = content.split("|", 1)
+            name = name.strip()
+            url = url.strip()
+
+            files = load_files()
+            files.insert(0, {"name": name, "url": url})
+            save_files(files)
+
+            reply = f"✅ Added: {name}"
+        else:
+            reply = "⚠️ Use format: `/upload File Name | https://download-link.com`"
+
+        if BOT_TOKEN:
+            requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}
+            )
+
+    return jsonify({"status": "ok"}), 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-# ================= TELEGRAM ADMIN BOT =================
-bot = telebot.TeleBot(BOT_TOKEN, skip_pending=True)
-try:
-    bot.remove_webhook()
-except Exception:
-    pass
-
-admin_sessions = {}
-
-@bot.message_handler(commands=['start'])
-def start_bot(m):
-    if m.from_user.id != ADMIN_ID:
-        bot.reply_to(m, "⛔ <b>Access Denied!</b> This is a private web control bot.", parse_mode='HTML')
-        return
-
-    msg = (
-        f"👑 <b>OX WEBSITE ADMIN PANEL</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"Aap yahan se directly website par files upload kar sakte hain.\n\n"
-        f"Commands:\n"
-        f"👉 /upload - Naya app ya file publish karein\n"
-        f"👉 /list - Live uploaded items dekhein\n"
-        f"👉 /delete &lt;id&gt; - Koi post delete karein\n"
-        f"👉 /cancel - Current action cancel karein\n"
-        f"━━━━━━━━━━━━━━━━━━━━"
-    )
-    bot.reply_to(m, msg, parse_mode='HTML')
-
-@bot.message_handler(commands=['cancel'])
-def cancel_op(m):
-    if m.from_user.id == ADMIN_ID:
-        admin_sessions.pop(ADMIN_ID, None)
-        bot.reply_to(m, "❌ Action cancelled.")
-
-@bot.message_handler(commands=['upload'])
-def init_upload(m):
-    if m.from_user.id != ADMIN_ID:
-        return
-    admin_sessions[ADMIN_ID] = {"step": "WAIT_FILE"}
-    bot.send_message(
-        m.chat.id,
-        "📁 <b>STEP 1: File bhejiye</b>\n\nJo APK, ZIP, ya Document user ko download karwana hai, use yahan send karein.\n<i>(Cancel ke liye /cancel likhein)</i>",
-        parse_mode='HTML'
-    )
-
-@bot.message_handler(content_types=['document', 'audio', 'video'], func=lambda m: admin_sessions.get(m.from_user.id, {}).get("step") == "WAIT_FILE")
-def get_file(m):
-    doc = m.document or m.audio or m.video
-    file_id = doc.file_id
-    f_info = bot.get_file(file_id)
-    direct_link = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{f_info.file_path}"
-
-    admin_sessions[ADMIN_ID]["file_link"] = direct_link
-    admin_sessions[ADMIN_ID]["file_name"] = getattr(doc, 'file_name', 'Download File')
-    admin_sessions[ADMIN_ID]["step"] = "WAIT_ICON"
-
-    bot.send_message(
-        m.chat.id,
-        "🖼️ <b>STEP 2: Icon Image Link bhejiye</b>\n\nWeb card par jo logo/icon dikhana hai uska image link (URL) paste karein:\n<i>(Example: https://i.imgur.com/xyz.png)</i>",
-        parse_mode='HTML'
-    )
-
-@bot.message_handler(func=lambda m: admin_sessions.get(m.from_user.id, {}).get("step") == "WAIT_ICON")
-def get_icon(m):
-    url = m.text.strip()
-    if not url.startswith("http"):
-        bot.reply_to(m, "⚠️ Kripya valid http ya https image URL bhejein!")
-        return
-
-    admin_sessions[ADMIN_ID]["icon"] = url
-    admin_sessions[ADMIN_ID]["step"] = "WAIT_NAME"
-    bot.send_message(m.chat.id, "🏷️ <b>STEP 3: App / File Name bhejiye</b>\n\nJaise: <code>Free Fire Max Sensitivity VIP</code>", parse_mode='HTML')
-
-@bot.message_handler(func=lambda m: admin_sessions.get(m.from_user.id, {}).get("step") == "WAIT_NAME")
-def get_name(m):
-    admin_sessions[ADMIN_ID]["name"] = m.text.strip()
-    admin_sessions[ADMIN_ID]["step"] = "WAIT_DESC"
-    bot.send_message(m.chat.id, "📝 <b>STEP 4: Short Description bhejiye</b>\n\nJaise: <code>100% Headshot config with smooth fps support.</code>", parse_mode='HTML')
-
-@bot.message_handler(func=lambda m: admin_sessions.get(m.from_user.id, {}).get("step") == "WAIT_DESC")
-def get_desc(m):
-    sess = admin_sessions[ADMIN_ID]
-    sess["desc"] = m.text.strip()
-
-    preview = (
-        f"📋 <b>PREVIEW CARD FOR WEBSITE</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏷️ <b>Title:</b> {sess['name']}\n"
-        f"📝 <b>Desc:</b> {sess['desc']}\n"
-        f"🖼️ <b>Icon:</b> {sess['icon']}\n"
-        f"📦 <b>File:</b> {sess['file_name']}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"Kya ise website par live publish karna hai?"
-    )
-
-    kb = types.InlineKeyboardMarkup()
-    kb.add(
-        types.InlineKeyboardButton("🚀 Publish Now", callback_data="pub_confirm"),
-        types.InlineKeyboardButton("❌ Cancel", callback_data="pub_cancel")
-    )
-    bot.send_message(m.chat.id, preview, parse_mode='HTML', reply_markup=kb)
-
-@bot.callback_query_handler(func=lambda c: c.data in ["pub_confirm", "pub_cancel"])
-def publish_callback(c):
-    if c.from_user.id != ADMIN_ID:
-        return
-
-    if c.data == "pub_confirm":
-        sess = admin_sessions.pop(ADMIN_ID, None)
-        if not sess:
-            bot.answer_callback_query(c.id, "Session expired!")
-            return
-
-        new_item = {
-            "id": int(time.time()),
-            "name": sess["name"],
-            "desc": sess["desc"],
-            "icon": sess["icon"],
-            "file_link": sess["file_link"]
-        }
-        POSTS.insert(0, new_item)
-        save_posts(POSTS)
-
-        bot.edit_message_text(
-            f"🎉 <b>Successfully Published to Website!</b>\n\nNaya card live ho chuka hai.",
-            chat_id=c.message.chat.id,
-            message_id=c.message.message_id,
-            parse_mode='HTML'
-        )
-    else:
-        admin_sessions.pop(ADMIN_ID, None)
-        bot.edit_message_text("❌ Cancel kar diya gaya.", chat_id=c.message.chat.id, message_id=c.message.message_id)
-
-@bot.message_handler(commands=['list'])
-def list_items(m):
-    if m.from_user.id != ADMIN_ID:
-        return
-    if not POSTS:
-        bot.reply_to(m, "Web page par abhi koi file nahi hai.")
-        return
-
-    out = "📂 <b>CURRENT WEBSITE POSTS:</b>\n\n"
-    for item in POSTS:
-        out += f"• <code>{item['id']}</code> : <b>{item['name']}</b>\n"
-    out += "\nDelete karne ke liye: <code>/delete &lt;id&gt;</code>"
-    bot.reply_to(m, out, parse_mode='HTML')
-
-@bot.message_handler(commands=['delete'])
-def delete_item(m):
-    if m.from_user.id != ADMIN_ID:
-        return
-    parts = m.text.split()
-    if len(parts) < 2 or not parts[1].isdigit():
-        bot.reply_to(m, "Format: <code>/delete 1726000000</code>", parse_mode='HTML')
-        return
-
-    target_id = int(parts[1])
-    global POSTS
-    before = len(POSTS)
-    POSTS = [p for p in POSTS if p["id"] != target_id]
-
-    if len(POSTS) < before:
-        save_posts(POSTS)
-        bot.reply_to(m, f"✅ Item <code>{target_id}</code> removed from website!", parse_mode='HTML')
-    else:
-        bot.reply_to(m, "❌ ID nahi mili.", parse_mode='HTML')
-
-# ================= MAIN RUNNER =================
-if __name__ == '__main__':
-    threading.Thread(target=run_flask, daemon=True).start()
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
-    
